@@ -139,7 +139,8 @@ export async function handleRegistration(event) {
       members.push({
         userId: 'currentUser',
         joinedAt: new Date().toISOString(),
-        answers: answers // This now contains name, email, phone, reason, source, experience
+        answers: answers, // This now contains name, email, phone, reason, source, experience
+        status: 'pending' // Mark as pending application
       });
       eventToUpdate.clubMembers = JSON.stringify(members);
     }
