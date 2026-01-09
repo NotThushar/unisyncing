@@ -1,0 +1,35 @@
+.event-card {
+  transition: all 0.2s ease;
+  border: 1px solid;
+}
+
+.event-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.tab-button {
+  transition: all 0.2s ease;
+}
+
+.category-pill {
+  transition: all 0.2s ease;
+  border: 1px solid;
+}
+
+.category-pill:hover {
+  transform: translateY(-1px);
+}
+
+.create-button {
+  transition: all 0.2s ease;
+}
+
+.create-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.modal-backdrop {
+  backdrop-filter: blur(8px);
+}

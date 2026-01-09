@@ -1,0 +1,17 @@
+body {
+  box-sizing: border-box;
+  font-family: 'Inter', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+input, select, textarea {
+  transition: border-color 0.2s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: currentColor;
+}
