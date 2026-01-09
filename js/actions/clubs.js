@@ -1,10 +1,20 @@
 import { state } from '../state.js';
 import { saveData } from '../storage.js';
 import { renderApp } from '../ui/appShell.js';
+import { openRegistrationModal } from './events.js';
 
 export function joinClub(clubName) {
   let club = state.allEvents.find(e => e.isClub && e.title === clubName);
   
+  // Questions for the club application
+  const applicationQuestions = [
+    { id: 'fullname', question: 'Full Name', required: true, yesNoType: false },
+    { id: 'studentId', question: 'Student ID', required: true, yesNoType: false },
+    { id: 'department', question: 'Department', required: true, yesNoType: false },
+    { id: 'year', question: 'Year of Study', required: true, yesNoType: false },
+    { id: 'reason', question: 'Why do you want to join this organization?', required: true, yesNoType: false }
+  ];
+
   if (!club) {
     let category = 'Social';
     if (clubName.includes('Computer') || clubName.includes('IEEE')) category = 'Academic';
@@ -21,22 +31,23 @@ export function joinClub(clubName) {
       time: '',
       location: 'Main Campus',
       description: `Official ${clubName} of the college`,
-      questions: JSON.stringify([]),
+      questions: JSON.stringify(applicationQuestions),
       registrations: JSON.stringify({}),
       isSubscribed: false,
       isClub: true,
-      clubMembers: JSON.stringify([{ userId: 'currentUser', joinedAt: new Date().toISOString() }]),
+      clubMembers: JSON.stringify([]),
       createdAt: new Date().toISOString()
     };
     state.allEvents.push(club);
   } else {
-    const members = club.clubMembers ? JSON.parse(club.clubMembers) : [];
-    members.push({ userId: 'currentUser', joinedAt: new Date().toISOString() });
-    club.clubMembers = JSON.stringify(members);
+    // Ensure existing clubs have the questions if they try to join
+    if (!club.questions || club.questions === '[]') {
+      club.questions = JSON.stringify(applicationQuestions);
+    }
   }
 
-  saveData();
-  renderApp();
+  // Open the modal to ask questions instead of immediate join
+  openRegistrationModal(club.id);
 }
 
 export function leaveClub(clubName) {

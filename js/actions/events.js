@@ -2,6 +2,7 @@ import { state } from '../state.js';
 import { renderApp } from '../ui/appShell.js';
 import { config as defaultConfig } from '../config.js';
 import { formatDate } from '../utils.js';
+import { saveData } from '../storage.js';
 
 // --- Registration Logic ---
 
@@ -14,34 +15,89 @@ export function openRegistrationModal(eventId) {
   state.currentRegistrationEventId = eventId;
   document.getElementById('registration-modal').classList.remove('hidden');
   
-  const event = state.allEvents.find(e => e.id === eventId);
-  if (!event) return;
-
   const container = document.getElementById('registration-questions');
-  const questions = event.questions ? JSON.parse(event.questions) : [];
   const config = window.elementSdk?.config || defaultConfig;
   const isDarkMode = config.dark_mode || false;
   const surfaceColor = isDarkMode ? "#2d2d2d" : (config.surface_color || defaultConfig.surface_color);
   const textColor = isDarkMode ? "#ffffff" : (config.text_color || defaultConfig.text_color);
 
-  if (questions.length === 0) {
-    container.innerHTML = `<p style="color: ${textColor};">Are you sure you want to register for <strong>${event.title}</strong>?</p>`;
-  } else {
-    container.innerHTML = questions.map(q => `
-      <div>
-        <label class="block mb-2 font-medium" style="color: ${textColor}; font-size: ${config.font_size * 0.93}px;">
-          ${q.question} ${q.required ? '<span style="color:red">*</span>' : ''}
-        </label>
-        ${q.yesNoType 
-          ? `<select name="${q.id}" ${q.required ? 'required' : ''} class="w-full px-4 py-2.5 rounded-lg" style="background: ${surfaceColor}; color: ${textColor}; border: 1px solid #e5e7eb;">
-               <option value="">Select an answer</option>
-               <option value="Yes">Yes</option>
-               <option value="No">No</option>
-             </select>`
-          : `<input type="text" name="${q.id}" ${q.required ? 'required' : ''} class="w-full px-4 py-2.5 rounded-lg" style="background: ${surfaceColor}; color: ${textColor}; border: 1px solid #e5e7eb;" placeholder="Your answer">`
-        }
+  const event = state.allEvents.find(e => e.id === eventId);
+  if (!event) return;
+
+  // Update header based on type
+  const titleEl = document.querySelector('#registration-modal h3');
+  if (titleEl) {
+    titleEl.textContent = event.isClub ? 'Apply to Join Organization' : 'Register for Event';
+  }
+  
+  // Update button text
+  const btnEl = document.getElementById('register-btn');
+  if (btnEl) {
+    btnEl.textContent = event.isClub ? 'Submit Application' : 'Register';
+  }
+
+  if (event.isClub) {
+    // Render the detailed club application form
+    container.innerHTML = `
+      <div class="space-y-5">
+        <div>
+          <label class="block mb-2 font-medium" style="color: ${textColor}; font-size: ${config.font_size * 0.93}px;">Full Name *</label>
+          <input type="text" name="name" required class="w-full px-4 py-2.5 rounded-lg" style="background: ${surfaceColor}; color: ${textColor}; border: 1px solid #e5e7eb;" placeholder="Enter your full name">
+        </div>
+        <div>
+          <label class="block mb-2 font-medium" style="color: ${textColor}; font-size: ${config.font_size * 0.93}px;">Email *</label>
+          <input type="email" name="email" required class="w-full px-4 py-2.5 rounded-lg" style="background: ${surfaceColor}; color: ${textColor}; border: 1px solid #e5e7eb;" placeholder="Enter your email">
+        </div>
+        <div>
+          <label class="block mb-2 font-medium" style="color: ${textColor}; font-size: ${config.font_size * 0.93}px;">Phone Number *</label>
+          <input type="tel" name="phone" required class="w-full px-4 py-2.5 rounded-lg" style="background: ${surfaceColor}; color: ${textColor}; border: 1px solid #e5e7eb;" placeholder="Enter your phone number">
+        </div>
+        <div>
+          <label class="block mb-2 font-medium" style="color: ${textColor}; font-size: ${config.font_size * 0.93}px;">Why do you want to join this organization? *</label>
+          <textarea name="reason" required rows="3" class="w-full px-4 py-2.5 rounded-lg" style="background: ${surfaceColor}; color: ${textColor}; border: 1px solid #e5e7eb;" placeholder="Share your motivation"></textarea>
+        </div>
+        <div>
+          <label class="block mb-2 font-medium" style="color: ${textColor}; font-size: ${config.font_size * 0.93}px;">How did you get to know about this organization? *</label>
+          <select name="source" required class="w-full px-4 py-2.5 rounded-lg" style="background: ${surfaceColor}; color: ${textColor}; border: 1px solid #e5e7eb;">
+            <option value="">Select an option</option>
+            <option value="Friend/Peer">Friend or Peer</option>
+            <option value="Social Media">Social Media</option>
+            <option value="Campus Event">Campus Event</option>
+            <option value="Email/Newsletter">Email or Newsletter</option>
+            <option value="Professor/Faculty">Professor or Faculty</option>
+            <option value="Website">College Website</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label class="block mb-2 font-medium" style="color: ${textColor}; font-size: ${config.font_size * 0.93}px;">Prior Experience & Achievements</label>
+          <textarea name="experience" rows="4" class="w-full px-4 py-2.5 rounded-lg" style="background: ${surfaceColor}; color: ${textColor}; border: 1px solid #e5e7eb;" placeholder="Share any relevant experience, skills, or achievements related to this organization (optional)"></textarea>
+        </div>
       </div>
-    `).join('');
+    `;
+  } else {
+    // Render dynamic questions for regular events
+    const questions = event.questions ? JSON.parse(event.questions) : [];
+    
+    if (questions.length === 0) {
+      container.innerHTML = `<p style="color: ${textColor};">Are you sure you want to register for <strong>${event.title}</strong>?</p>`;
+    } else {
+      container.innerHTML = questions.map(q => `
+        <div>
+          <label class="block mb-2 font-medium" style="color: ${textColor}; font-size: ${config.font_size * 0.93}px;">
+            ${q.question} ${q.required ? '<span style="color:red">*</span>' : ''}
+          </label>
+          ${q.yesNoType 
+            ? `<select name="${q.id}" ${q.required ? 'required' : ''} class="w-full px-4 py-2.5 rounded-lg" style="background: ${surfaceColor}; color: ${textColor}; border: 1px solid #e5e7eb;">
+                 <option value="">Select an answer</option>
+                 <option value="Yes">Yes</option>
+                 <option value="No">No</option>
+               </select>`
+            : `<input type="text" name="${q.id}" ${q.required ? 'required' : ''} class="w-full px-4 py-2.5 rounded-lg" style="background: ${surfaceColor}; color: ${textColor}; border: 1px solid #e5e7eb;" placeholder="Your answer">`
+          }
+        </div>
+      `).join('');
+    }
   }
 }
 
@@ -66,32 +122,61 @@ export async function handleRegistration(event) {
 
   const registerBtn = document.getElementById('register-btn');
   registerBtn.disabled = true;
-  registerBtn.textContent = 'Registering...';
+  registerBtn.textContent = 'Processing...';
 
-  // Add user to registrations
-  const registrations = eventToUpdate.registrations ? JSON.parse(eventToUpdate.registrations) : {};
-  registrations['currentUser'] = {
-    userId: 'currentUser',
-    registeredAt: new Date().toISOString()
-  };
-  eventToUpdate.registrations = JSON.stringify(registrations);
-  
-  // Optimistic update
-  eventToUpdate.isSubscribed = true;
+  // Capture Form Data (Answers)
+  const formData = new FormData(event.target);
+  const answers = {};
+  formData.forEach((value, key) => {
+    answers[key] = value;
+  });
+
+  // Handle Logic based on Type (Club vs Event)
+  if (eventToUpdate.isClub) {
+    const members = eventToUpdate.clubMembers ? JSON.parse(eventToUpdate.clubMembers) : [];
+    // Add member if not exists
+    if (!members.some(m => m.userId === 'currentUser')) {
+      members.push({
+        userId: 'currentUser',
+        joinedAt: new Date().toISOString(),
+        answers: answers // This now contains name, email, phone, reason, source, experience
+      });
+      eventToUpdate.clubMembers = JSON.stringify(members);
+    }
+  } else {
+    // Add user to registrations
+    const registrations = eventToUpdate.registrations ? JSON.parse(eventToUpdate.registrations) : {};
+    registrations['currentUser'] = {
+      userId: 'currentUser',
+      registeredAt: new Date().toISOString(),
+      answers: answers
+    };
+    eventToUpdate.registrations = JSON.stringify(registrations);
+    
+    // Optimistic update
+    eventToUpdate.isSubscribed = true;
+  }
 
   try {
     const updateResult = window.dataSdk ? await window.dataSdk.update(eventToUpdate) : { isOk: true };
     
     if (updateResult.isOk) {
+      saveData(); // Persist to local storage if SDK not available
       closeRegistrationModal();
-      state.currentTab = 'calendar';
+      
+      // If it's an event, switch to calendar. If club, stay/refresh.
+      if (!eventToUpdate.isClub) {
+        state.currentTab = 'calendar';
+      }
       renderApp();
     } else {
       throw new Error('Update failed');
     }
   } catch (error) {
     // Revert optimistic update
-    eventToUpdate.isSubscribed = false;
+    if (!eventToUpdate.isClub) {
+      eventToUpdate.isSubscribed = false;
+    }
     
     const config = window.elementSdk?.config || defaultConfig;
     const errorModal = document.createElement('div');
@@ -99,7 +184,7 @@ export async function handleRegistration(event) {
     errorModal.style.cssText = 'background: rgba(0, 0, 0, 0.4); z-index: 1001;';
     errorModal.innerHTML = `
       <div class="rounded-xl p-6 max-w-sm" style="background: ${config.background_color}; border: 1px solid #e5e7eb;">
-        <p class="mb-4" style="color: ${config.text_color};">Failed to register. Please try again.</p>
+        <p class="mb-4" style="color: ${config.text_color};">Failed to process request. Please try again.</p>
         <button onclick="this.parentElement.parentElement.remove()" class="w-full px-4 py-2 rounded-lg font-medium" style="background: ${config.primary_action}; color: ${config.background_color};">OK</button>
       </div>
     `;
@@ -107,7 +192,7 @@ export async function handleRegistration(event) {
   }
 
   registerBtn.disabled = false;
-  registerBtn.textContent = 'Register';
+  registerBtn.textContent = eventToUpdate.isClub ? 'Submit Application' : 'Register';
 }
 
 // --- Event Details Logic ---
@@ -369,6 +454,7 @@ export async function handleCreateEvent(event) {
   
   if (createResult.isOk) {
     if(!window.dataSdk) state.allEvents.push(newEvent); // Fallback if no SDK
+    saveData(); // Ensure local save
     closeCreateModal();
     if (isClub) {
       state.currentTab = 'organizations';
