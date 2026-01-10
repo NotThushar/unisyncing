@@ -1,36 +1,49 @@
 import { state } from '../state.js';
-import { saveData } from '../storage.js';
 import { renderApp } from '../ui/appShell.js';
-import { openRegistrationModal } from './events.js'; // Reuse the registration modal logic
+import { openRegistrationModal } from './events.js';
+import { updateEventInFirebase } from '../storage.js'; // Ensure this is imported if used, otherwise remove/adjust
 
 export function joinClub(clubName) {
   let club = state.allEvents.find(e => e.isClub && e.title === clubName);
   
-  // Default questions for a club application if they don't exist
+  // Questions for the club application
   const applicationQuestions = [
     { id: 'fullname', question: 'Full Name', required: true, yesNoType: false },
     { id: 'studentId', question: 'Student ID', required: true, yesNoType: false },
-    { id: 'reason', question: 'Why do you want to join?', required: true, yesNoType: false }
+    { id: 'department', question: 'Department', required: true, yesNoType: false },
+    { id: 'year', question: 'Year of Study', required: true, yesNoType: false },
+    { id: 'reason', question: 'Why do you want to join this organization?', required: true, yesNoType: false }
   ];
 
   if (!club) {
-    // If club doesn't exist in our DB yet (from preset list), create a temporary object for context
-    // In a real app, you wouldn't create it here, but for this mock setup:
     let category = 'Social';
     if (clubName.includes('Computer') || clubName.includes('IEEE')) category = 'Academic';
     if (clubName.includes('Sports')) category = 'Sports';
-    
-    // We don't save this yet, just use it to open the modal
+    if (clubName.includes('Drama')) category = 'Cultural';
+    if (clubName.includes('Debate')) category = 'Academic';
+
+    // Create a temporary club object if it doesn't exist in our state yet
+    // Note: In a real app with Firebase, you might want to fetch or create this differently
     club = {
-        id: 'temp-' + Date.now(),
-        title: clubName,
-        isClub: true,
-        questions: JSON.stringify(applicationQuestions)
+      id: 'temp-' + Date.now(),
+      title: clubName,
+      organization: clubName,
+      category: category,
+      date: '',
+      time: '',
+      location: 'Main Campus',
+      description: `Official ${clubName} of the college`,
+      questions: JSON.stringify(applicationQuestions),
+      registrations: JSON.stringify({}),
+      isSubscribed: false,
+      isClub: true,
+      clubMembers: JSON.stringify([]),
+      createdAt: new Date().toISOString()
     };
-    // We push it to state temporarily so the modal can find it by ID
+    // Push temporarily to state so modal can find it
     state.allEvents.push(club);
   } else {
-    // Ensure existing clubs have the questions if they try to join
+    // Ensure existing clubs have questions
     if (!club.questions || club.questions === '[]') {
       club.questions = JSON.stringify(applicationQuestions);
     }
@@ -44,26 +57,32 @@ export function leaveClub(clubName) {
   const club = state.allEvents.find(e => e.isClub && e.title === clubName);
   if (!club) return;
 
-  // Show confirm modal instead of browser confirm
+  const performLeave = async () => {
+    const members = club.clubMembers ? JSON.parse(club.clubMembers) : [];
+    // Using current user ID or anon
+    const userId = state.currentUser?.uid || 'anon';
+    const filteredMembers = members.filter(m => m.userId !== userId);
+    
+    // Update Firebase
+    if (club.id && !club.id.startsWith('temp-')) {
+       await updateEventInFirebase(club.id, { clubMembers: JSON.stringify(filteredMembers) });
+    }
+    
+    // Optimistic update
+    club.clubMembers = JSON.stringify(filteredMembers);
+    renderApp();
+  };
+
   if(window.openConfirmModal) {
-      window.openConfirmModal(`Are you sure you want to leave ${clubName}?`, () => {
-          const members = club.clubMembers ? JSON.parse(club.clubMembers) : [];
-          const filteredMembers = members.filter(m => m.userId !== 'currentUser'); // Mock ID
-          club.clubMembers = JSON.stringify(filteredMembers);
-          saveData();
-          renderApp();
-      });
+      window.openConfirmModal(`Are you sure you want to leave ${clubName}?`, performLeave);
   } else {
-      // Fallback
       if(confirm(`Leave ${clubName}?`)) {
-          const members = club.clubMembers ? JSON.parse(club.clubMembers) : [];
-          const filteredMembers = members.filter(m => m.userId !== 'currentUser');
-          club.clubMembers = JSON.stringify(filteredMembers);
-          saveData();
-          renderApp();
+          performLeave();
       }
   }
 }
 
 export function handleClubApplication(e) {
     e.preventDefault();
+    // Logic handled by handleRegistration in events.js since we reuse that modal
+}
