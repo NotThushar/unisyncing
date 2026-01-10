@@ -25,7 +25,7 @@ export async function handleCreateEvent(e, questions) {
     time: isClub ? '' : document.getElementById('time').value,
     location: document.getElementById('location').value,
     description: document.getElementById('description').value,
-    questions: JSON.stringify(questions || []), // Save the questions passed from app.js
+    questions: JSON.stringify(questions || []), 
     registrations: JSON.stringify({}),
     isSubscribed: false,
     isClub: isClub,
@@ -51,7 +51,6 @@ export async function handleCreateEvent(e, questions) {
 // --- Questions Logic ---
 
 export function addQuestion() {
-    // This is purely UI state, handled in app.js usually, but we can define the object structure here
     return { id: Date.now(), question: '', required: false, yesNoType: false };
 }
 
@@ -127,24 +126,19 @@ export async function handleRegistration(e) {
   btn.disabled = true;
   btn.textContent = "Processing...";
 
-  // 1. Gather Answers (Mock logic for now, ideally save these)
-  // const formData = new FormData(e.target); 
-  
-  // 2. Update Backend
   if (event.isClub) {
       const members = event.clubMembers ? JSON.parse(event.clubMembers) : [];
       members.push({ userId: state.currentUser?.uid || 'anon', joinedAt: new Date().toISOString() });
       await updateEventInFirebase(event.id, { clubMembers: JSON.stringify(members) });
   } else {
       const regs = event.registrations ? JSON.parse(event.registrations) : {};
-      regs[state.currentUser?.uid || 'anon'] = { registeredAt: new Date().toISOString() };
+      const uid = state.currentUser?.uid || 'anon';
+      regs[uid] = { registeredAt: new Date().toISOString() };
       await updateEventInFirebase(event.id, { 
-          registrations: JSON.stringify(regs),
-          isSubscribed: true // Local optimistic update helper
+          registrations: JSON.stringify(regs)
       });
   }
 
-  // 3. UI Feedback
   if(window.closeRegistrationModal) window.closeRegistrationModal();
   btn.disabled = false;
 }
@@ -153,21 +147,21 @@ export function unregisterFromEvent(eventId) {
     const event = state.allEvents.find(e => e.id === eventId);
     if (!event) return;
 
-    // Use Custom Modal if available, else fallback
-    if (window.openConfirmModal) {
-        window.openConfirmModal(`Unregister from ${event.title}?`, async () => {
-            const regs = event.registrations ? JSON.parse(event.registrations) : {};
-            const uid = state.currentUser?.uid || 'anon';
-            if (regs[uid]) delete regs[uid];
-            
-            await updateEventInFirebase(event.id, { 
-                registrations: JSON.stringify(regs),
-                isSubscribed: false 
-            });
+    const performUnregister = async () => {
+        const regs = event.registrations ? JSON.parse(event.registrations) : {};
+        const uid = state.currentUser?.uid || 'anon';
+        if (regs[uid]) delete regs[uid];
+        
+        await updateEventInFirebase(event.id, { 
+            registrations: JSON.stringify(regs)
         });
+    };
+
+    if (window.openConfirmModal) {
+        window.openConfirmModal(`Unregister from ${event.title}?`, performUnregister);
     } else {
         if(confirm("Unregister?")) {
-             // ... same logic
+             performUnregister();
         }
     }
 }
