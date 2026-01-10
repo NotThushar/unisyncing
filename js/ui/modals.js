@@ -1,5 +1,15 @@
 import { config, getTheme } from '../config.js';
 import { state } from '../state.js';
+import { 
+    handleSignup, 
+    handleCreateEvent, 
+    handleRegistration, 
+    handleClubApplication,
+    addQuestion,
+    removeQuestion,
+    updateQuestion,
+    saveQuestions 
+} from '../app.js'; // We will ensure these are exported from app.js or actions
 
 export function renderModals() {
   const theme = getTheme(state.darkMode);
@@ -11,7 +21,7 @@ export function renderModals() {
   const signupModalHTML = `
     <div id="signup-modal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center p-4" style="background: rgba(0, 0, 0, 0.4); z-index: 1000;" onclick="closeSignupModalOnBackdrop(event)">
       <div class="rounded-2xl p-8 max-w-md w-full slide-in" style="background: ${theme.backgroundColor}; border: 1px solid #e5e7eb;" onclick="event.stopPropagation()">
-        <h3 class="font-bold mb-6" style="font-size: ${theme.baseSize * 1.6}px; color: ${theme.textColor};">Sign up / Log in</h3>
+        <h3 class="font-bold mb-6" style="font-size: ${theme.baseSize * 1.6}px; color: ${theme.textColor};">Sign up</h3>
         
         <!-- Google Sign-In Button -->
         <button 
@@ -112,6 +122,7 @@ export function renderModals() {
               <textarea id="description" required rows="3" class="w-full px-4 py-2.5 rounded-lg" style="background: ${theme.surfaceColor}; color: ${theme.textColor}; border: 1px solid #e5e7eb; font-size: ${theme.baseSize * 0.93}px;" placeholder="Event details"></textarea>
             </div>
             
+            <!-- This button was not working because openQuestionsModal wasn't globally accessible -->
             <button 
               type="button" 
               onclick="openQuestionsModal()"
@@ -134,7 +145,7 @@ export function renderModals() {
     </div>
   `;
 
-  // --- 3. Questions Modal (Explicitly Rendered) ---
+  // --- 3. Questions Modal (Must be rendered to exist) ---
   const questionsModalHTML = `
     <div id="questions-modal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center p-4" style="background: rgba(0, 0, 0, 0.4); z-index: 1001;" onclick="closeQuestionsModalOnBackdrop(event)">
       <div class="rounded-2xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto slide-in" style="background: ${theme.backgroundColor}; border: 1px solid #e5e7eb;" onclick="event.stopPropagation()">
@@ -185,26 +196,15 @@ export function renderModals() {
        </div>
     </div>
 
-    <!-- Confirm Unregister Modal -->
-    <div id="confirm-modal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center p-4" style="background: rgba(0, 0, 0, 0.4); z-index: 1002;" onclick="closeConfirmModalOnBackdrop(event)">
-        <div class="rounded-2xl p-8 max-w-md w-full slide-in" style="background: ${theme.backgroundColor}; border: 1px solid #e5e7eb;" onclick="event.stopPropagation()">
-          <h3 class="font-bold mb-4" style="font-size: ${theme.baseSize * 1.6}px; color: ${theme.textColor};">Confirm Action</h3>
-          <p id="confirm-message" class="mb-6" style="font-size: ${theme.baseSize * 0.93}px; color: ${theme.textColor};">Are you sure?</p>
-          <div class="flex gap-3">
-            <button type="button" onclick="closeConfirmModal()" class="flex-1 px-4 py-2.5 rounded-lg font-medium" style="background: ${theme.surfaceColor}; color: ${theme.textColor}; border: 1px solid #e5e7eb;">Cancel</button>
-            <button type="button" id="confirm-action-btn" class="flex-1 px-4 py-2.5 rounded-lg font-medium" style="background: ${theme.primaryAction}; color: ${theme.backgroundColor};">Confirm</button>
-          </div>
-        </div>
-    </div>
-
-    <!-- Club Application Modal (Re-using structure for both club apply and event register basically) -->
     <div id="club-application-modal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center p-4" style="background: rgba(0, 0, 0, 0.4); z-index: 1000;" onclick="closeClubApplicationModalOnBackdrop(event)">
         <div class="rounded-2xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto slide-in" style="background: ${theme.backgroundColor}; border: 1px solid #e5e7eb;" onclick="event.stopPropagation()">
           <h3 class="font-bold mb-6" style="font-size: ${theme.baseSize * 1.6}px; color: ${theme.textColor};">Apply to Organization</h3>
           <form id="club-application-form" onsubmit="handleClubApplication(event)">
-            <!-- Dynamic Content -->
-            <div id="club-application-questions" class="space-y-4 mb-4"></div>
-            
+            <div class="space-y-4">
+                <input type="text" id="app-name" required placeholder="Full Name" class="w-full px-4 py-2.5 rounded-lg" style="background: ${theme.surfaceColor}; color: ${theme.textColor}; border: 1px solid #e5e7eb;">
+                <input type="email" id="app-email" required placeholder="Email" class="w-full px-4 py-2.5 rounded-lg" style="background: ${theme.surfaceColor}; color: ${theme.textColor}; border: 1px solid #e5e7eb;">
+                <textarea id="app-reason" required rows="3" placeholder="Why do you want to join?" class="w-full px-4 py-2.5 rounded-lg" style="background: ${theme.surfaceColor}; color: ${theme.textColor}; border: 1px solid #e5e7eb;"></textarea>
+            </div>
             <div class="flex gap-3 mt-8">
               <button type="button" onclick="closeClubApplicationModal()" class="flex-1 px-4 py-2.5 rounded-lg font-medium" style="background: ${theme.surfaceColor}; color: ${theme.textColor}; border: 1px solid #e5e7eb;">Cancel</button>
               <button type="submit" id="apply-btn" class="flex-1 px-4 py-2.5 rounded-lg font-medium" style="background: ${theme.primaryAction}; color: ${theme.backgroundColor};">Submit</button>
