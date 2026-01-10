@@ -1,9 +1,14 @@
 import { state } from '../state.js';
+import { addEventToFirestore, updateEventInFirestore } from '../storage.js';
 import { renderApp } from '../ui/appShell.js';
 import { openRegistrationModal } from './events.js';
-import { updateEventInFirebase } from '../storage.js'; // Ensure this is imported if used, otherwise remove/adjust
 
-export function joinClub(clubName) {
+export async function joinClub(clubName) {
+  if (!state.currentUser) {
+    alert("Please sign in to join clubs.");
+    return;
+  }
+
   let club = state.allEvents.find(e => e.isClub && e.title === clubName);
   
   // Questions for the club application
@@ -16,73 +21,55 @@ export function joinClub(clubName) {
   ];
 
   if (!club) {
+    // Create new club if it doesn't exist yet
     let category = 'Social';
     if (clubName.includes('Computer') || clubName.includes('IEEE')) category = 'Academic';
     if (clubName.includes('Sports')) category = 'Sports';
     if (clubName.includes('Drama')) category = 'Cultural';
     if (clubName.includes('Debate')) category = 'Academic';
 
-    // Create a temporary club object if it doesn't exist in our state yet
-    // Note: In a real app with Firebase, you might want to fetch or create this differently
-    club = {
-      id: 'temp-' + Date.now(),
+    const newClub = {
       title: clubName,
       organization: clubName,
       category: category,
-      date: '',
-      time: '',
-      location: 'Main Campus',
       description: `Official ${clubName} of the college`,
-      questions: JSON.stringify(applicationQuestions),
-      registrations: JSON.stringify({}),
-      isSubscribed: false,
       isClub: true,
-      clubMembers: JSON.stringify([]),
-      createdAt: new Date().toISOString()
+      clubMembers: JSON.stringify([{ 
+        userId: state.currentUser.uid, 
+        joinedAt: new Date().toISOString() 
+      }]),
+      createdAt: new Date().toISOString(),
+      creatorId: state.currentUser.uid
     };
-    // Push temporarily to state so modal can find it
-    state.allEvents.push(club);
+    await addEventToFirestore(newClub);
   } else {
-    // Ensure existing clubs have questions
-    if (!club.questions || club.questions === '[]') {
-      club.questions = JSON.stringify(applicationQuestions);
-    }
-  }
+    // Join existing club
+    const members = club.clubMembers ? JSON.parse(club.clubMembers) : [];
+    
+    // Check if already member
+    if (members.some(m => m.userId === state.currentUser.uid)) return;
 
-  // Open the modal to ask questions instead of immediate join
-  openRegistrationModal(club.id);
+    members.push({ 
+      userId: state.currentUser.uid, 
+      joinedAt: new Date().toISOString() 
+    });
+
+    await updateEventInFirestore(club.id, {
+      clubMembers: JSON.stringify(members)
+    });
+  }
 }
 
-export function leaveClub(clubName) {
+export async function leaveClub(clubName) {
+  if (!state.currentUser) return;
+
   const club = state.allEvents.find(e => e.isClub && e.title === clubName);
   if (!club) return;
 
-  const performLeave = async () => {
-    const members = club.clubMembers ? JSON.parse(club.clubMembers) : [];
-    // Using current user ID or anon
-    const userId = state.currentUser?.uid || 'anon';
-    const filteredMembers = members.filter(m => m.userId !== userId);
-    
-    // Update Firebase
-    if (club.id && !club.id.startsWith('temp-')) {
-       await updateEventInFirebase(club.id, { clubMembers: JSON.stringify(filteredMembers) });
-    }
-    
-    // Optimistic update
-    club.clubMembers = JSON.stringify(filteredMembers);
-    renderApp();
-  };
+  const members = club.clubMembers ? JSON.parse(club.clubMembers) : [];
+  const filteredMembers = members.filter(m => m.userId !== state.currentUser.uid);
 
-  if(window.openConfirmModal) {
-      window.openConfirmModal(`Are you sure you want to leave ${clubName}?`, performLeave);
-  } else {
-      if(confirm(`Leave ${clubName}?`)) {
-          performLeave();
-      }
-  }
-}
-
-export function handleClubApplication(e) {
-    e.preventDefault();
-    // Logic handled by handleRegistration in events.js since we reuse that modal
+  await updateEventInFirestore(club.id, {
+    clubMembers: JSON.stringify(filteredMembers)
+  });
 }
