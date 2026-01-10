@@ -1,15 +1,7 @@
 import { config, getTheme } from '../config.js';
 import { state } from '../state.js';
-import { 
-    handleSignup, 
-    handleCreateEvent, 
-    handleRegistration, 
-    handleClubApplication,
-    addQuestion,
-    removeQuestion,
-    updateQuestion,
-    saveQuestions 
-} from '../app.js'; // We will ensure these are exported from app.js or actions
+// We don't strictly need to import actions here because they are called via global window functions (onclick),
+// but we keep the file structure clean.
 
 export function renderModals() {
   const theme = getTheme(state.darkMode);
@@ -17,13 +9,12 @@ export function renderModals() {
   
   if (!modalsContainer) return;
 
-  // --- 1. Signup Modal with Google Button ---
+  // --- 1. Signup/Login Modal (Updated with Toggle & Google Auth) ---
   const signupModalHTML = `
     <div id="signup-modal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center p-4" style="background: rgba(0, 0, 0, 0.4); z-index: 1000;" onclick="closeSignupModalOnBackdrop(event)">
       <div class="rounded-2xl p-8 max-w-md w-full slide-in" style="background: ${theme.backgroundColor}; border: 1px solid #e5e7eb;" onclick="event.stopPropagation()">
-        <h3 class="font-bold mb-6" style="font-size: ${theme.baseSize * 1.6}px; color: ${theme.textColor};">Sign up</h3>
+        <h3 class="font-bold mb-6 text-2xl" style="color: ${theme.textColor};">Sign up</h3>
         
-        <!-- Google Sign-In Button -->
         <button 
           onclick="handleGoogleLogin()" 
           class="w-full mb-4 px-4 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -44,35 +35,37 @@ export function renderModals() {
         </div>
 
         <form id="signup-form" onsubmit="handleSignup(event)">
-          <div class="space-y-5">
+          <div class="space-y-4">
             <div>
-              <label class="block mb-2 font-medium" style="font-size: ${theme.baseSize * 0.93}px; color: ${theme.textColor};" for="signup-name">Full name</label>
-              <input type="text" id="signup-name" required class="w-full px-4 py-2.5 rounded-lg" style="background: ${theme.surfaceColor}; color: ${theme.textColor}; border: 1px solid #e5e7eb; font-size: ${theme.baseSize * 0.93}px;" placeholder="Enter your name">
+              <label class="block mb-1 font-medium text-sm" style="color: ${theme.textColor};">Full name</label>
+              <input type="text" id="signup-name" required class="w-full px-4 py-2.5 rounded-lg border" style="background: ${theme.surfaceColor}; color: ${theme.textColor}; border-color: #e5e7eb;">
             </div>
             <div>
-              <label class="block mb-2 font-medium" style="font-size: ${theme.baseSize * 0.93}px; color: ${theme.textColor};" for="signup-email">Email</label>
-              <input type="email" id="signup-email" required class="w-full px-4 py-2.5 rounded-lg" style="background: ${theme.surfaceColor}; color: ${theme.textColor}; border: 1px solid #e5e7eb; font-size: ${theme.baseSize * 0.93}px;" placeholder="Enter your email">
+              <label class="block mb-1 font-medium text-sm" style="color: ${theme.textColor};">Email</label>
+              <input type="email" id="signup-email" required class="w-full px-4 py-2.5 rounded-lg border" style="background: ${theme.surfaceColor}; color: ${theme.textColor}; border-color: #e5e7eb;">
             </div>
             <div>
-              <label class="block mb-2 font-medium" style="font-size: ${theme.baseSize * 0.93}px; color: ${theme.textColor};" for="signup-password">Password</label>
-              <input type="password" id="signup-password" required class="w-full px-4 py-2.5 rounded-lg" style="background: ${theme.surfaceColor}; color: ${theme.textColor}; border: 1px solid #e5e7eb; font-size: ${theme.baseSize * 0.93}px;" placeholder="Create a password">
+              <label class="block mb-1 font-medium text-sm" style="color: ${theme.textColor};">Password</label>
+              <input type="password" id="signup-password" required class="w-full px-4 py-2.5 rounded-lg border" style="background: ${theme.surfaceColor}; color: ${theme.textColor}; border-color: #e5e7eb;">
             </div>
           </div>
-          <div class="flex gap-3 mt-8">
-            <button type="button" onclick="closeSignupModal()" class="flex-1 px-4 py-2.5 rounded-lg font-medium" style="background: ${theme.surfaceColor}; color: ${theme.textColor}; border: 1px solid #e5e7eb; font-size: ${theme.baseSize * 0.93}px;">
+          <div class="flex gap-3 mt-6">
+            <button type="button" onclick="closeSignupModal()" class="flex-1 px-4 py-2.5 rounded-lg font-medium border" style="background: ${theme.surfaceColor}; color: ${theme.textColor}; border-color: #e5e7eb;">
               Cancel
             </button>
-            <button type="submit" id="signup-btn" class="flex-1 px-4 py-2.5 rounded-lg font-medium" style="background: ${theme.primaryAction}; color: ${theme.backgroundColor}; font-size: ${theme.baseSize * 0.93}px;">
+            <button type="submit" id="signup-btn" class="flex-1 px-4 py-2.5 rounded-lg font-medium text-white" style="background: ${theme.primaryAction}; color: ${theme.backgroundColor};">
               Sign up
             </button>
           </div>
-          <p id="auth-toggle-text" class="mt-4 text-center text-sm">Already have an account? <a href="#" onclick="toggleAuthMode()">Log In</a></p>
+          <p id="auth-toggle-text" class="mt-4 text-center text-sm" style="color: ${theme.secondaryAction};">
+            Already have an account? <a href="#" onclick="toggleAuthMode()" class="underline" style="color: ${theme.primaryAction};">Log In</a>
+          </p>
         </form>
       </div>
     </div>
   `;
 
-  // --- 2. Create Event Modal ---
+  // --- 2. Create Event/Org Modal ---
   const createModalHTML = `
     <div id="create-modal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center p-4" style="background: rgba(0, 0, 0, 0.4); z-index: 1000;" onclick="closeModalOnBackdrop(event)">
       <div class="rounded-2xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto slide-in" style="background: ${theme.backgroundColor}; border: 1px solid #e5e7eb;" onclick="event.stopPropagation()">
@@ -87,7 +80,7 @@ export function renderModals() {
             
             <div id="organization-field" style="${state.currentTab === 'organizations' ? 'display: none;' : ''}">
               <label class="block mb-2 font-medium" style="font-size: ${theme.baseSize * 0.93}px; color: ${theme.textColor};" for="organization">Organization</label>
-               <input type="text" id="organization" ${state.currentTab === 'organizations' ? '' : 'required'} class="w-full px-4 py-2.5 rounded-lg" style="background: ${theme.surfaceColor}; color: ${theme.textColor}; border: 1px solid #e5e7eb; font-size: ${theme.baseSize * 0.93}px;" placeholder="Organization Name">
+              <input type="text" id="organization" ${state.currentTab === 'organizations' ? '' : 'required'} class="w-full px-4 py-2.5 rounded-lg" style="background: ${theme.surfaceColor}; color: ${theme.textColor}; border: 1px solid #e5e7eb; font-size: ${theme.baseSize * 0.93}px;" placeholder="Organization Name">
             </div>
             
             <div>
@@ -120,10 +113,9 @@ export function renderModals() {
 
             <div>
               <label class="block mb-2 font-medium" style="font-size: ${theme.baseSize * 0.93}px; color: ${theme.textColor};" for="description">Description</label>
-              <textarea id="description" required rows="3" class="w-full px-4 py-2.5 rounded-lg" style="background: ${theme.surfaceColor}; color: ${theme.textColor}; border: 1px solid #e5e7eb; font-size: ${theme.baseSize * 0.93}px;" placeholder="Event details"></textarea>
+              <textarea id="description" required rows="3" class="w-full px-4 py-2.5 rounded-lg" style="background: ${theme.surfaceColor}; color: ${theme.textColor}; border: 1px solid #e5e7eb; font-size: ${theme.baseSize * 0.93}px;" placeholder="Details..."></textarea>
             </div>
             
-            <!-- This button was not working because openQuestionsModal wasn't globally accessible -->
             <button 
               type="button" 
               onclick="openQuestionsModal()"
@@ -146,15 +138,13 @@ export function renderModals() {
     </div>
   `;
 
-  // --- 3. Questions Modal (Must be rendered to exist) ---
+  // --- 3. Questions Modal ---
   const questionsModalHTML = `
     <div id="questions-modal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center p-4" style="background: rgba(0, 0, 0, 0.4); z-index: 1001;" onclick="closeQuestionsModalOnBackdrop(event)">
       <div class="rounded-2xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto slide-in" style="background: ${theme.backgroundColor}; border: 1px solid #e5e7eb;" onclick="event.stopPropagation()">
         <h3 class="font-bold mb-6" style="font-size: ${theme.baseSize * 1.6}px; color: ${theme.textColor};">Add Custom Questions</h3>
         
-        <div id="questions-list" class="space-y-4 mb-4">
-           <!-- Dynamic Questions go here -->
-        </div>
+        <div id="questions-list" class="space-y-4 mb-4"></div>
         
         <button 
           type="button" 
@@ -176,7 +166,7 @@ export function renderModals() {
     </div>
   `;
 
-  // --- 4. Event Details & Registration Modals ---
+  // --- 4. Event Details & Registration ---
   const detailsModalHTML = `
     <div id="event-details-modal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center p-4" style="background: rgba(0, 0, 0, 0.4); z-index: 1000;" onclick="closeEventDetailsModalOnBackdrop(event)">
       <div class="rounded-2xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto slide-in" style="background: ${theme.backgroundColor}; border: 1px solid #e5e7eb;" onclick="event.stopPropagation()">
@@ -196,25 +186,41 @@ export function renderModals() {
           </form>
        </div>
     </div>
+  `;
 
+  // --- 5. Club Application Modal (New) ---
+  const clubAppModalHTML = `
     <div id="club-application-modal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center p-4" style="background: rgba(0, 0, 0, 0.4); z-index: 1000;" onclick="closeClubApplicationModalOnBackdrop(event)">
-        <div class="rounded-2xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto slide-in" style="background: ${theme.backgroundColor}; border: 1px solid #e5e7eb;" onclick="event.stopPropagation()">
-          <h3 class="font-bold mb-6" style="font-size: ${theme.baseSize * 1.6}px; color: ${theme.textColor};">Apply to Organization</h3>
+        <div class="rounded-2xl p-8 max-w-lg w-full slide-in" style="background: ${theme.backgroundColor}; border: 1px solid #e5e7eb;" onclick="event.stopPropagation()">
+          <h3 class="font-bold mb-6 text-xl" style="color: ${theme.textColor};">Apply to Organization</h3>
           <form id="club-application-form" onsubmit="handleClubApplication(event)">
             <div class="space-y-4">
-                <input type="text" id="app-name" required placeholder="Full Name" class="w-full px-4 py-2.5 rounded-lg" style="background: ${theme.surfaceColor}; color: ${theme.textColor}; border: 1px solid #e5e7eb;">
-                <input type="email" id="app-email" required placeholder="Email" class="w-full px-4 py-2.5 rounded-lg" style="background: ${theme.surfaceColor}; color: ${theme.textColor}; border: 1px solid #e5e7eb;">
-                <textarea id="app-reason" required rows="3" placeholder="Why do you want to join?" class="w-full px-4 py-2.5 rounded-lg" style="background: ${theme.surfaceColor}; color: ${theme.textColor}; border: 1px solid #e5e7eb;"></textarea>
+                <input type="text" id="app-name" required placeholder="Full Name" class="w-full px-4 py-2.5 rounded-lg border" style="background: ${theme.surfaceColor}; color: ${theme.textColor}; border-color: #e5e7eb;">
+                <input type="email" id="app-email" required placeholder="Email" class="w-full px-4 py-2.5 rounded-lg border" style="background: ${theme.surfaceColor}; color: ${theme.textColor}; border-color: #e5e7eb;">
+                <textarea id="app-reason" required rows="3" placeholder="Why do you want to join?" class="w-full px-4 py-2.5 rounded-lg border" style="background: ${theme.surfaceColor}; color: ${theme.textColor}; border-color: #e5e7eb;"></textarea>
             </div>
             <div class="flex gap-3 mt-8">
-              <button type="button" onclick="closeClubApplicationModal()" class="flex-1 px-4 py-2.5 rounded-lg font-medium" style="background: ${theme.surfaceColor}; color: ${theme.textColor}; border: 1px solid #e5e7eb;">Cancel</button>
-              <button type="submit" id="apply-btn" class="flex-1 px-4 py-2.5 rounded-lg font-medium" style="background: ${theme.primaryAction}; color: ${theme.backgroundColor};">Submit</button>
+              <button type="button" onclick="closeClubApplicationModal()" class="flex-1 px-4 py-2.5 rounded-lg font-medium border" style="background: ${theme.surfaceColor}; color: ${theme.textColor}; border-color: #e5e7eb;">Cancel</button>
+              <button type="submit" id="apply-btn" class="flex-1 px-4 py-2.5 rounded-lg font-medium text-white" style="background: ${theme.primaryAction}; color: ${theme.backgroundColor};">Submit</button>
             </div>
           </form>
         </div>
     </div>
   `;
 
-  // Inject into DOM
-  modalsContainer.innerHTML = signupModalHTML + createModalHTML + questionsModalHTML + detailsModalHTML;
+  modalsContainer.innerHTML = signupModalHTML + createModalHTML + questionsModalHTML + detailsModalHTML + clubAppModalHTML;
+}
+
+export function showSimpleMessage(message) {
+  const theme = getTheme(state.darkMode);
+  const modal = document.createElement('div');
+  modal.className = 'fixed inset-0 flex items-center justify-center p-4';
+  modal.style.cssText = 'background: rgba(0, 0, 0, 0.4); z-index: 1003;';
+  modal.innerHTML = `
+    <div class="rounded-xl p-6 max-w-sm slide-in" style="background: ${theme.backgroundColor}; border: 1px solid #e5e7eb;">
+      <p class="mb-4" style="color: ${theme.textColor}; font-size: ${theme.baseSize}px;">${message}</p>
+      <button onclick="this.parentElement.parentElement.remove()" class="w-full px-4 py-2 rounded-lg font-medium" style="background: ${theme.primaryAction}; color: ${theme.backgroundColor};">OK</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
 }
