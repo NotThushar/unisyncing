@@ -1,75 +1,69 @@
 import { state } from '../state.js';
-import { addEventToFirestore, updateEventInFirestore } from '../storage.js';
+import { saveData } from '../storage.js';
 import { renderApp } from '../ui/appShell.js';
-import { openRegistrationModal } from './events.js';
+import { openRegistrationModal } from './events.js'; // Reuse the registration modal logic
 
-export async function joinClub(clubName) {
-  if (!state.currentUser) {
-    alert("Please sign in to join clubs.");
-    return;
-  }
-
+export function joinClub(clubName) {
   let club = state.allEvents.find(e => e.isClub && e.title === clubName);
   
-  // Questions for the club application
+  // Default questions for a club application if they don't exist
   const applicationQuestions = [
     { id: 'fullname', question: 'Full Name', required: true, yesNoType: false },
     { id: 'studentId', question: 'Student ID', required: true, yesNoType: false },
-    { id: 'department', question: 'Department', required: true, yesNoType: false },
-    { id: 'year', question: 'Year of Study', required: true, yesNoType: false },
-    { id: 'reason', question: 'Why do you want to join this organization?', required: true, yesNoType: false }
+    { id: 'reason', question: 'Why do you want to join?', required: true, yesNoType: false }
   ];
 
   if (!club) {
-    // Create new club if it doesn't exist yet
+    // If club doesn't exist in our DB yet (from preset list), create a temporary object for context
+    // In a real app, you wouldn't create it here, but for this mock setup:
     let category = 'Social';
     if (clubName.includes('Computer') || clubName.includes('IEEE')) category = 'Academic';
     if (clubName.includes('Sports')) category = 'Sports';
-    if (clubName.includes('Drama')) category = 'Cultural';
-    if (clubName.includes('Debate')) category = 'Academic';
-
-    const newClub = {
-      title: clubName,
-      organization: clubName,
-      category: category,
-      description: `Official ${clubName} of the college`,
-      isClub: true,
-      clubMembers: JSON.stringify([{ 
-        userId: state.currentUser.uid, 
-        joinedAt: new Date().toISOString() 
-      }]),
-      createdAt: new Date().toISOString(),
-      creatorId: state.currentUser.uid
-    };
-    await addEventToFirestore(newClub);
-  } else {
-    // Join existing club
-    const members = club.clubMembers ? JSON.parse(club.clubMembers) : [];
     
-    // Check if already member
-    if (members.some(m => m.userId === state.currentUser.uid)) return;
-
-    members.push({ 
-      userId: state.currentUser.uid, 
-      joinedAt: new Date().toISOString() 
-    });
-
-    await updateEventInFirestore(club.id, {
-      clubMembers: JSON.stringify(members)
-    });
+    // We don't save this yet, just use it to open the modal
+    club = {
+        id: 'temp-' + Date.now(),
+        title: clubName,
+        isClub: true,
+        questions: JSON.stringify(applicationQuestions)
+    };
+    // We push it to state temporarily so the modal can find it by ID
+    state.allEvents.push(club);
+  } else {
+    // Ensure existing clubs have the questions if they try to join
+    if (!club.questions || club.questions === '[]') {
+      club.questions = JSON.stringify(applicationQuestions);
+    }
   }
+
+  // Open the modal to ask questions instead of immediate join
+  openRegistrationModal(club.id);
 }
 
-export async function leaveClub(clubName) {
-  if (!state.currentUser) return;
-
+export function leaveClub(clubName) {
   const club = state.allEvents.find(e => e.isClub && e.title === clubName);
   if (!club) return;
 
-  const members = club.clubMembers ? JSON.parse(club.clubMembers) : [];
-  const filteredMembers = members.filter(m => m.userId !== state.currentUser.uid);
-
-  await updateEventInFirestore(club.id, {
-    clubMembers: JSON.stringify(filteredMembers)
-  });
+  // Show confirm modal instead of browser confirm
+  if(window.openConfirmModal) {
+      window.openConfirmModal(`Are you sure you want to leave ${clubName}?`, () => {
+          const members = club.clubMembers ? JSON.parse(club.clubMembers) : [];
+          const filteredMembers = members.filter(m => m.userId !== 'currentUser'); // Mock ID
+          club.clubMembers = JSON.stringify(filteredMembers);
+          saveData();
+          renderApp();
+      });
+  } else {
+      // Fallback
+      if(confirm(`Leave ${clubName}?`)) {
+          const members = club.clubMembers ? JSON.parse(club.clubMembers) : [];
+          const filteredMembers = members.filter(m => m.userId !== 'currentUser');
+          club.clubMembers = JSON.stringify(filteredMembers);
+          saveData();
+          renderApp();
+      }
+  }
 }
+
+export function handleClubApplication(e) {
+    e.preventDefault();
