@@ -1,9 +1,14 @@
 import { auth, googleProvider } from '../firebase.js';
-import { signInWithPopup, createUserWithEmailAndPassword, signOut, updateProfile, signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from "firebase/auth";
 import { state } from '../state.js';
+
+let isLoginMode = false;
+
 // --- Modal Controls ---
 export function openSignupModal() {
   document.getElementById('signup-modal').classList.remove('hidden');
+  isLoginMode = false;
+  updateAuthModalUI();
 }
 
 export function closeSignupModal() {
@@ -12,8 +17,32 @@ export function closeSignupModal() {
 }
 
 export function closeSignupModalOnBackdrop(event) {
-  if (event.target.id === 'signup-modal') {
-    closeSignupModal();
+  if (event.target.id === 'signup-modal') closeSignupModal();
+}
+
+export function toggleAuthMode() {
+  isLoginMode = !isLoginMode;
+  updateAuthModalUI();
+}
+
+function updateAuthModalUI() {
+  const title = document.querySelector('#signup-modal h3');
+  const btn = document.getElementById('signup-btn');
+  const toggleText = document.getElementById('auth-toggle-text');
+  const nameField = document.getElementById('signup-name').parentElement;
+
+  if (isLoginMode) {
+    title.textContent = 'Log In';
+    btn.textContent = 'Log In';
+    nameField.style.display = 'none';
+    document.getElementById('signup-name').required = false;
+    toggleText.innerHTML = 'Need an account? <a href="#" onclick="toggleAuthMode()" class="text-blue-600 hover:underline">Sign Up</a>';
+  } else {
+    title.textContent = 'Sign Up';
+    btn.textContent = 'Sign Up';
+    nameField.style.display = 'block';
+    document.getElementById('signup-name').required = true;
+    toggleText.innerHTML = 'Already have an account? <a href="#" onclick="toggleAuthMode()" class="text-blue-600 hover:underline">Log In</a>';
   }
 }
 
@@ -29,49 +58,28 @@ export async function handleGoogleLogin() {
   }
 }
 
-let isLoginMode = false;
-
-export function toggleAuthMode() {
-  isLoginMode = !isLoginMode;
-  const title = document.querySelector('#signup-modal h3');
-  const btn = document.getElementById('signup-btn');
-  const toggleText = document.getElementById('auth-toggle-text');
-  const nameField = document.getElementById('signup-name').parentElement;
-
-  if (isLoginMode) {
-    title.textContent = 'Log In';
-    btn.textContent = 'Log In';
-    nameField.style.display = 'none'; // Hide name for login
-    toggleText.innerHTML = 'Need an account? <a href="#" onclick="toggleAuthMode()" class="text-blue-600 hover:underline">Sign Up</a>';
-  } else {
-    title.textContent = 'Sign Up';
-    btn.textContent = 'Sign Up';
-    nameField.style.display = 'block'; // Show name for signup
-    toggleText.innerHTML = 'Already have an account? <a href="#" onclick="toggleAuthMode()" class="text-blue-600 hover:underline">Log In</a>';
-  }
-}
-
 export async function handleSignup(event) {
   event.preventDefault();
   
   const email = document.getElementById('signup-email').value;
   const password = document.getElementById('signup-password').value;
-  const name = document.getElementById('signup-name').value;
   
   try {
     if (isLoginMode) {
-      // LOGIN LOGIC
-      await signInWithEmailAndPassword(auth, email, password);
-      alert("Logged in successfully!");
+       await signInWithEmailAndPassword(auth, email, password);
+       // Alert optional, usually auto-close is better
     } else {
-      // SIGNUP LOGIC
-      const result = await createUserWithEmailAndPassword(auth, email, password);
-      // ... (update profile logic remains the same)
-      alert(`Welcome, ${name}!`);
+       const name = document.getElementById('signup-name').value;
+       const result = await createUserWithEmailAndPassword(auth, email, password);
+       await updateProfile(result.user, { displayName: name });
     }
     closeSignupModal();
   } catch (error) {
     console.error("Auth Error:", error);
-    alert(error.message); // This will tell you if password is wrong, etc.
+    alert(error.message);
   }
+}
+
+export async function handleLogout() {
+  try { await signOut(auth); } catch (error) { console.error(error); }
 }
