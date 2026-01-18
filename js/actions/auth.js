@@ -1,6 +1,6 @@
 import { auth, googleProvider } from '../firebase.js';
-import { signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from "firebase/auth";
-import { state } from '../state.js';
+import { signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, GoogleAuthProvider } from "firebase/auth";
+import { state, setState } from '../state.js';
 
 let isLoginMode = false;
 
@@ -50,7 +50,17 @@ function updateAuthModalUI() {
 
 export async function handleGoogleLogin() {
   try {
-    await signInWithPopup(auth, googleProvider);
+    const result = await signInWithPopup(auth, googleProvider);
+    
+    // This gives you a Google Access Token. You can use it to access the Google API.
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    const token = credential.accessToken;
+    
+    if (token) {
+      setState('googleAccessToken', token);
+      localStorage.setItem('googleAccessToken', token);
+    }
+
     closeSignupModal();
   } catch (error) {
     console.error("Google Login Error:", error);
@@ -67,7 +77,7 @@ export async function handleSignup(event) {
   try {
     if (isLoginMode) {
        await signInWithEmailAndPassword(auth, email, password);
-       // Alert optional, usually auto-close is better
+       // Note: Email/Password login won't provide a Google Calendar token.
     } else {
        const name = document.getElementById('signup-name').value;
        const result = await createUserWithEmailAndPassword(auth, email, password);
@@ -81,5 +91,11 @@ export async function handleSignup(event) {
 }
 
 export async function handleLogout() {
-  try { await signOut(auth); } catch (error) { console.error(error); }
+  try { 
+    await signOut(auth); 
+    setState('googleAccessToken', null);
+    localStorage.removeItem('googleAccessToken');
+  } catch (error) { 
+    console.error(error); 
+  }
 }

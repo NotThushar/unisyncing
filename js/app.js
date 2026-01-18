@@ -6,12 +6,14 @@ import { onAuthStateChanged } from "firebase/auth";
 import * as eventActions from './actions/events.js';
 import * as clubActions from './actions/clubs.js';
 import * as authActions from './actions/auth.js';
+import * as calendarActions from './actions/calendar.js'; // Import new actions
 
 // --- Global Assignments for Inline Event Handlers ---
 Object.assign(window, {
   ...eventActions,
   ...clubActions,
   ...authActions,
+  ...calendarActions, // Expose to window
   
   switchTab: (tab) => {
     setState('currentTab', tab);
@@ -46,6 +48,12 @@ Object.assign(window, {
 function init() {
   const appElement = document.getElementById('app');
   
+  // Restore Google Token if present
+  const savedToken = localStorage.getItem('googleAccessToken');
+  if (savedToken) {
+    setState('googleAccessToken', savedToken);
+  }
+
   // Show loading state initially
   if (appElement) {
     appElement.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100vh;color:#666;">Loading UniSync...</div>';

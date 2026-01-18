@@ -1,10 +1,13 @@
 export const state = {
   allEvents: [],
-  currentUser: null, // New: Tracks the logged-in user
+  currentUser: null, 
   currentTab: 'discover',
   selectedCategory: 'all',
   selectedOrganization: 'all',
   darkMode: false,
+  
+  // Auth tokens
+  googleAccessToken: null,
   
   // Transient UI state
   eventQuestions: [],

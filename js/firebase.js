@@ -22,9 +22,12 @@ try {
   db = getFirestore(app);
   auth = getAuth(app);
   googleProvider = new GoogleAuthProvider();
+  
+  // Add the Google Calendar scope
+  googleProvider.addScope('https://www.googleapis.com/auth/calendar.events');
+  
 } catch (error) {
   console.error("Firebase initialization failed.", error);
-  // Optional: You could alert the user here so they know why the site is broken
   if (typeof window !== 'undefined') {
     alert("Site Configuration Error: Check console for details.");
   }
