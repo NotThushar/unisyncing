@@ -18,7 +18,7 @@ export function renderCalendarList() {
       </div>
       <h3 class="font-semibold mb-2" style="font-size: ${theme.baseSize * 1.13}px; color: ${theme.textColor};">${event.title}</h3>
       <p class="mb-3" style="font-size: ${theme.baseSize * 0.87}px; color: ${theme.secondaryAction};">${event.organization}</p>
-      <div class="space-y-1" style="font-size: ${theme.baseSize * 0.87}px; color: ${theme.textColor};">
+      <div class="space-y-1 mb-4" style="font-size: ${theme.baseSize * 0.87}px; color: ${theme.textColor};">
         <div style="display: flex; align-items: center;">
           <div style="width: 24px; display: flex; justify-content: center;">
             <svg width="16" height="16" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -38,18 +38,22 @@ export function renderCalendarList() {
           </div>
           <span style="margin-left: 8px;">${event.time}</span>
         </div>
-        <div style="display: flex; align-items: center;">
-          <div style="width: 24px; display: flex; justify-content: center;">
-            <svg width="24.24" height="24.24" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <g transform="translate(4 2)">
-                <path d="M6.5 16.54l-.71-.71a29.49 29.49 0 01-2.58-3.23 9.24 9.24 0 01-1.12-2.35 4.42 4.42 0 01-.19-1.42 5.3 5.3 0 01.31-1.65 4.68 4.68 0 012.27-2.72 4.84 4.84 0 011.67-.52 5.24 5.24 0 011.7 0 4.84 4.84 0 011.67.52A4.68 4.68 0 0112 7.18a5.3 5.3 0 01.31 1.65 4.42 4.42 0 01-.19 1.42 9.24 9.24 0 01-1.12 2.35 29.49 29.49 0 01-2.58 3.23z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
-                <circle cx="6.5" cy="8.5" r="2.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
-              </g>
-            </svg>
-          </div>
-          <span style="margin-left: 8px;">${event.location}</span>
-        </div>
       </div>
+
+      <button 
+        onclick="event.stopPropagation(); addToGoogleCalendar('${event.id}')" 
+        data-event-id="${event.id}"
+        class="w-full px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors hover:opacity-90" 
+        style="background: ${theme.surfaceColor}; color: ${theme.textColor}; border: 1px solid #e5e7eb; font-size: ${theme.baseSize * 0.87}px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M19 4H5C3.89543 4 3 4.89543 3 6V20C3 21.1046 3.89543 22 5 22H19C20.1046 22 21 21.1046 21 20V6C21 4.89543 20.1046 4 19 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M16 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M8 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M3 10H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M12 16H12.01" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Save to Calendar
+      </button>
     </div>
   `).join('');
 }

@@ -1,10 +1,14 @@
 import { auth, googleProvider } from '../firebase.js';
-import { signInWithPopup, createUserWithEmailAndPassword, signOut, updateProfile } from "firebase/auth";
-import { state } from '../state.js';
+import { signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, GoogleAuthProvider } from "firebase/auth";
+import { state, setState } from '../state.js';
+
+let isLoginMode = false;
 
 // --- Modal Controls ---
 export function openSignupModal() {
   document.getElementById('signup-modal').classList.remove('hidden');
+  isLoginMode = false;
+  updateAuthModalUI();
 }
 
 export function closeSignupModal() {
@@ -13,8 +17,32 @@ export function closeSignupModal() {
 }
 
 export function closeSignupModalOnBackdrop(event) {
-  if (event.target.id === 'signup-modal') {
-    closeSignupModal();
+  if (event.target.id === 'signup-modal') closeSignupModal();
+}
+
+export function toggleAuthMode() {
+  isLoginMode = !isLoginMode;
+  updateAuthModalUI();
+}
+
+function updateAuthModalUI() {
+  const title = document.querySelector('#signup-modal h3');
+  const btn = document.getElementById('signup-btn');
+  const toggleText = document.getElementById('auth-toggle-text');
+  const nameField = document.getElementById('signup-name').parentElement;
+
+  if (isLoginMode) {
+    title.textContent = 'Log In';
+    btn.textContent = 'Log In';
+    nameField.style.display = 'none';
+    document.getElementById('signup-name').required = false;
+    toggleText.innerHTML = 'Need an account? <a href="#" onclick="toggleAuthMode()" class="text-blue-600 hover:underline">Sign Up</a>';
+  } else {
+    title.textContent = 'Sign Up';
+    btn.textContent = 'Sign Up';
+    nameField.style.display = 'block';
+    document.getElementById('signup-name').required = true;
+    toggleText.innerHTML = 'Already have an account? <a href="#" onclick="toggleAuthMode()" class="text-blue-600 hover:underline">Log In</a>';
   }
 }
 
@@ -22,7 +50,17 @@ export function closeSignupModalOnBackdrop(event) {
 
 export async function handleGoogleLogin() {
   try {
-    await signInWithPopup(auth, googleProvider);
+    const result = await signInWithPopup(auth, googleProvider);
+    
+    // This gives you a Google Access Token. You can use it to access the Google API.
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    const token = credential.accessToken;
+    
+    if (token) {
+      setState('googleAccessToken', token);
+      localStorage.setItem('googleAccessToken', token);
+    }
+
     closeSignupModal();
   } catch (error) {
     console.error("Google Login Error:", error);
@@ -33,27 +71,31 @@ export async function handleGoogleLogin() {
 export async function handleSignup(event) {
   event.preventDefault();
   
-  const name = document.getElementById('signup-name').value;
   const email = document.getElementById('signup-email').value;
   const password = document.getElementById('signup-password').value;
   
   try {
-    const result = await createUserWithEmailAndPassword(auth, email, password);
-    // Update the user's display name in Firebase
-    await updateProfile(result.user, { displayName: name });
-    
+    if (isLoginMode) {
+       await signInWithEmailAndPassword(auth, email, password);
+       // Note: Email/Password login won't provide a Google Calendar token.
+    } else {
+       const name = document.getElementById('signup-name').value;
+       const result = await createUserWithEmailAndPassword(auth, email, password);
+       await updateProfile(result.user, { displayName: name });
+    }
     closeSignupModal();
-    alert(`Welcome, ${name}!`);
   } catch (error) {
-    console.error("Signup Error:", error);
+    console.error("Auth Error:", error);
     alert(error.message);
   }
 }
 
 export async function handleLogout() {
-  try {
-    await signOut(auth);
-  } catch (error) {
-    console.error("Logout Error:", error);
+  try { 
+    await signOut(auth); 
+    setState('googleAccessToken', null);
+    localStorage.removeItem('googleAccessToken');
+  } catch (error) { 
+    console.error(error); 
   }
 }
